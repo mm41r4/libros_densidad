@@ -1,0 +1,67 @@
+---
+title: "04 - Ejercicios - Tendencia central y varianza"
+output: 
+  html_notebook: 
+    toc: true
+---
+
+
+library(tidyverse)
+library(moments) # Para asimetría y kurtosis
+
+# Leer el dataset
+mis_libros <- read_csv("libros_estadistica.csv")
+
+# Limpiar los nombres para que sean fáciles de usar en R
+colnames(mis_libros) <- c("id", "titulo", "area_tapa", "palabras_pag", "paginas", "imagenes")
+
+# Mostrar el tibble
+mis_libros
+
+#índices para las 4 variables cuantitativas.
+# Función para calcular la moda (ya que R no tiene una directa)
+get_mode <- function(v) {
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+resumen_completo <- mis_libros %>%
+  pivot_longer(cols = c(area_tapa, palabras_pag, paginas, imagenes), 
+               names_to = "Variable", 
+               values_to = "Valor") %>%
+  group_by(Variable) %>%
+  summarise(
+    Media = mean(Valor),
+    Mediana = median(Valor),
+    Moda = get_mode(Valor),
+    Minimo = min(Valor),
+    Maximo = max(Valor),
+    Varianza = var(Valor),
+    Desvio_Std = sd(Valor),
+    Coef_Variacion = (sd(Valor) / mean(Valor)) * 100,
+    Error_Std = sd(Valor) / sqrt(n()),
+    Asimetria = skewness(Valor),
+    Kurtosis = kurtosis(Valor),
+    IC_Inferior = mean(Valor) - (qt(0.975, df=n()-1) * (sd(Valor)/sqrt(n()))),
+    IC_Superior = mean(Valor) + (qt(0.975, df=n()-1) * (sd(Valor)/sqrt(n())))
+  )
+
+# Ver el tibble con todos los resultados
+resumen_completo
+
+#Histogramas y Densidad (ejemplo con Páginas):
+ggplot(mis_libros, aes(x = paginas)) +
+  geom_histogram(aes(y = ..density..), bins = 8, fill = "lightblue", color = "black") +
+  geom_density(color = "red", size = 1) +
+  labs(title = "Histograma y Densidad de Páginas", x = "Número de Páginas", y = "Densidad")
+
+#Box Plot y Violín (ejemplo con Área de Tapa):
+ggplot(mis_libros, aes(x = "", y = area_tapa)) +
+  geom_violin(fill = "lightgreen", alpha = 0.4) +
+  geom_boxplot(width = 0.2, fill = "white", outlier.color = "red") +
+  labs(title = "Box Plot y Violín: Área de la Tapa", y = "cm2", x = "")
+
+#Probabilidad Acumulada (Ojiva):
+ggplot(mis_libros, aes(paginas)) +
+  stat_ecdf(geom = "step", color = "blue") +
+  labs(title = "Curva de Probabilidad Acumulada (Páginas)", y = "F(x)", x = "Páginas")
